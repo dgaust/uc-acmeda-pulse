@@ -1,7 +1,11 @@
 services:
   uc-acmeda-pulse:
-    build: .
-    image: uc-acmeda-pulse
+    # Prebuilt multi-arch image (amd64/x86 + arm64) published from this repo's
+    # CI - no clone or build needed, this file works standalone.
+    image: ghcr.io/dgaust/uc-acmeda-pulse:latest
+    # To build from source instead (requires a checkout of this repo),
+    # uncomment the next line and run: docker compose up -d --build
+    # build: .
     container_name: uc-acmeda-pulse
     restart: unless-stopped
     # Host networking is required so the driver's mDNS advertisement

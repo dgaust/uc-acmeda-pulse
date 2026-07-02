@@ -39,10 +39,33 @@ current directory if unset).
 ## Running as an external driver in Docker
 
 To run the driver on a home server / NAS (rather than on the Remote itself),
-use the provided `Dockerfile` / `docker-compose.yml`:
+use the prebuilt multi-arch image published to GitHub Container Registry by
+this repo's CI. No clone or build is needed - save the following as
+`docker-compose.yml` (it's the same file as in this repo) and start it:
+
+```yaml
+services:
+  uc-acmeda-pulse:
+    image: ghcr.io/dgaust/uc-acmeda-pulse:latest
+    container_name: uc-acmeda-pulse
+    restart: unless-stopped
+    # Required: mDNS discovery + LAN access don't work on a bridge network.
+    network_mode: host
+    environment:
+      UC_INTEGRATION_HTTP_PORT: "10091"
+    volumes:
+      # Persists the hub host + cached roller list across restarts/upgrades.
+      - ./config:/config
+```
 
 ```bash
-docker compose up -d --build
+docker compose up -d
+```
+
+To update to a newer release later:
+
+```bash
+docker compose pull && docker compose up -d
 ```
 
 **Host networking is required** (`network_mode: host`, already set in the
@@ -56,7 +79,11 @@ the hub host and cached roller list persist across restarts and image updates.
 After the container is running, add the integration from the Remote's
 integrations screen (it should be auto-discovered) and enter the hub's IP.
 
-To run without compose:
+### Building from source instead
+
+With a checkout of this repo, uncomment the `build: .` line in
+`docker-compose.yml` and run `docker compose up -d --build` - or without
+compose:
 
 ```bash
 docker build -t uc-acmeda-pulse .
