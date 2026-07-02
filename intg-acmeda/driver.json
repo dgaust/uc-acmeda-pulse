@@ -1,0 +1,50 @@
+{
+  "driver_id": "acmeda_pulse",
+  "version": "0.2.2",
+  "min_core_api": "0.20.0",
+  "name": {
+    "en": "Acmeda Pulse Hub"
+  },
+  "icon": "uc:integration",
+  "description": {
+    "en": "Control Rollease Acmeda Pulse Hub v2 motorised blinds directly over the local network - no Home Assistant required."
+  },
+  "port": 10091,
+  "developer": {
+    "name": "dgaust",
+    "url": "https://github.com/dgaust/uc-acmeda-pulse"
+  },
+  "home_page": "https://github.com/dgaust/uc-acmeda-pulse",
+  "setup_data_schema": {
+    "title": {
+      "en": "Acmeda Pulse Hub"
+    },
+    "settings": [
+      {
+        "id": "info",
+        "label": {
+          "en": ""
+        },
+        "field": {
+          "label": {
+            "value": {
+              "en": "Enter the IP address or hostname of your Rollease Acmeda Pulse Hub v2 (the hub used by the 'Pulse 2' mobile app). The hub must be reachable on your local network."
+            }
+          }
+        }
+      },
+      {
+        "id": "host",
+        "label": {
+          "en": "Hub IP address or hostname"
+        },
+        "field": {
+          "text": {
+            "value": ""
+          }
+        }
+      }
+    ]
+  },
+  "release_date": "2026-07-02"
+}

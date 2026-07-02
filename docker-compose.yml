@@ -1,0 +1,16 @@
+services:
+  uc-acmeda-pulse:
+    build: .
+    image: uc-acmeda-pulse
+    container_name: uc-acmeda-pulse
+    restart: unless-stopped
+    # Host networking is required so the driver's mDNS advertisement
+    # (_uc-integration._tcp) reaches the Remote and so it can talk to the hub
+    # on the LAN. mDNS multicast does not cross a Docker bridge network.
+    network_mode: host
+    environment:
+      # WebSocket integration-API port the Remote connects to (matches driver.json).
+      UC_INTEGRATION_HTTP_PORT: "10091"
+    volumes:
+      # Persist the hub host + cached roller list across restarts/upgrades.
+      - ./config:/config
