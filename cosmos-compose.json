@@ -1,0 +1,42 @@
+{
+  "cosmos-installer": {
+    "form": [
+      {
+        "name": "storagePath",
+        "label": "Where do you want to store the driver's settings?",
+        "initialValue": "{DefaultDataPath}",
+        "type": "text"
+      }
+    ],
+    "post-install": [
+      {
+        "type": "warning",
+        "label": "No URL is created for this app - it has no web page. Once it is running, pick up your Unfolded Circle Remote and go to Integrations, Add new. The driver is found automatically - select it and enter your Pulse Hub's IP address."
+      }
+    ]
+  },
+  "minVersion": "0.9.0",
+  "services": {
+    "{ServiceName}": {
+      "container_name": "{ServiceName}",
+      "image": "ghcr.io/dgaust/uc-acmeda-pulse:latest",
+      "restart": "unless-stopped",
+      "NetworkMode": "host",
+      "network_mode": "host",
+      "environment": [
+        "UC_INTEGRATION_HTTP_PORT=10091"
+      ],
+      "volumes": [
+        {
+          "source": "{Context.storagePath}/{ServiceName}",
+          "target": "/config",
+          "type": "bind"
+        }
+      ],
+      "labels": {
+        "cosmos-force-network-secured": "false",
+        "cosmos-auto-update": "true"
+      }
+    }
+  }
+}

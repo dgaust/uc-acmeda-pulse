@@ -87,6 +87,21 @@ docker compose pull && docker compose up -d
 Your settings live in the `config` folder next to the compose file, so they
 survive updates.
 
+### Using Cosmos?
+
+If your server runs [Cosmos](https://cosmos-cloud.io/), you can install the
+driver as a ServApp instead of using compose directly:
+
+1. In Cosmos, go to **ServApps → Start ServApp → Import Compose File**.
+2. Paste the contents of
+   [`cosmos-compose.json`](https://raw.githubusercontent.com/dgaust/uc-acmeda-pulse/main/cosmos-compose.json)
+   from this repo and follow the installer.
+
+The installer only asks where to store the driver's settings. The app has no
+web page of its own, so Cosmos won't create a URL for it - once it's running,
+just add the integration on the Remote as described above. Updates are
+handled by Cosmos automatically.
+
 ## For developers
 
 Everything below is only relevant if you want to change or build the
@@ -167,6 +182,7 @@ intg-acmeda/
   shared.py           shared setup used by the other files
 Dockerfile            Docker image for running on a server/NAS
 docker-compose.yml    ready-to-use Docker setup
+cosmos-compose.json   one-click install for Cosmos servers
 build-docker.sh       builds Docker images for x86 and ARM
 ```
 
