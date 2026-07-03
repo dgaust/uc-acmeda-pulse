@@ -6,6 +6,11 @@ config.json
 *.egg-info/
 .pytest_cache/
 dist/
+# byproducts of build-intg.sh (PyInstaller + the packed archive)
+artifacts/
+build/
+*.spec
+uc-intg-acmeda-*.tar.gz
 # local external-driver config volume created by docker-compose (contains the
 # hub host + roller cache for *your* installation - not part of the repo)
 config/

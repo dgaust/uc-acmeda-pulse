@@ -1,0 +1,4 @@
+# Extra packages needed only by the test suite (see tests/).
+# cryptography: generates the self-signed certificate for the fake hub's
+# TLS websocket server in test_pulsehub.py / test_adaptive_poll.py.
+cryptography

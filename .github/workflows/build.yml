@@ -1,0 +1,99 @@
+# Tests + on-Remote archive build on every push; on a version tag it also
+# publishes a GitHub pre-release (beta) with the archive and its checksum.
+# Promote a beta to a full release by unticking "pre-release" on GitHub once
+# it has been tested on a real Remote.
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  HASH_FILENAME: uc-intg-acmeda.hash
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r intg-acmeda/requirements.txt -r test-requirements.txt
+
+      # The tests are standalone scripts (each owns its event loop and fake
+      # servers), so they run one per process rather than under pytest.
+      - name: Run test suite
+        run: |
+          set -e
+          for t in tests/test_*.py; do
+            echo "===== $t ====="
+            python "$t"
+          done
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from driver.json
+        id: ver
+        run: echo "version=$(jq -r .version intg-acmeda/driver.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check the tag matches driver.json (release builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [ "$GITHUB_REF_NAME" != "v${{ steps.ver.outputs.version }}" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match driver.json version ${{ steps.ver.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Set up QEMU (ARM emulation for the builder image)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build the on-Remote archive
+        run: bash build-intg.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uc-intg-acmeda-${{ steps.ver.outputs.version }}-aarch64
+          path: uc-intg-acmeda-*.tar.gz
+          if-no-files-found: error
+          retention-days: 3
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+
+      - name: Collect archive and create checksum file
+        run: |
+          find . -name '*.tar.gz' -exec mv {} . \;
+          sha256sum *.tar.gz > "$HASH_FILENAME"
+          cat "$HASH_FILENAME"
+
+      - name: Create pre-release (beta)
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            *.tar.gz
+            ${{ env.HASH_FILENAME }}

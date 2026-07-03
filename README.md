@@ -118,6 +118,41 @@ The GitHub Actions workflow in `.github/workflows/docker.yml` publishes
 multi-arch images to GitHub Container Registry automatically on every push to
 `main` and on version tags.
 
+### Tests
+
+The tests in `tests/` are standalone scripts - run each one on its own:
+
+```bash
+pip install -r intg-acmeda/requirements.txt -r test-requirements.txt
+for t in tests/test_*.py; do python "$t"; done
+```
+
+They cover the hub protocol client (against a fake hub server), the driver's
+startup and restart behaviour, and the mapping of blind state to what the
+Remote shows. CI runs them on every push.
+
+### Releases (automated)
+
+Releases are built and published by CI. To put out a new version:
+
+1. Change `"version"` in `intg-acmeda/driver.json` (say `0.3.0`).
+2. Commit and push, then tag it:
+
+   ```bash
+   git tag v0.3.0 && git push origin v0.3.0
+   ```
+
+CI then runs the tests, builds the install file for the Remote, and publishes
+a **pre-release (beta)** on GitHub with the file and its checksum attached.
+Matching Docker image tags are published at the same time. The build fails if
+the tag doesn't match the version in `driver.json`.
+
+Once a beta has been tested on a real Remote, promote it: edit the release on
+GitHub and untick "Set as a pre-release".
+
+The install file can also be built locally with `bash build-intg.sh`
+(needs Docker).
+
 ### What's in the repo
 
 ```
