@@ -1,47 +1,53 @@
-# uc-acmeda-pulse
+# Acmeda Pulse Hub for Unfolded Circle Remote
 
-An [Unfolded Circle Remote](https://www.unfoldedcircle.com/) integration
-driver for the **Rollease Acmeda Pulse Hub v2** (the hub behind the "Pulse 2"
-app). It talks to the hub directly over the local network - no Home
-Assistant, no cloud - using a small purpose-built async client (`pulsehub.py`).
+Control your Rollease Acmeda motorised blinds from an
+[Unfolded Circle Remote](https://www.unfoldedcircle.com/).
 
-## What it does
+The integration talks directly to your **Pulse Hub v2** (the hub used with the
+"Automate Pulse 2" phone app) over your home network. Nothing goes through the
+cloud, and you don't need Home Assistant or any other software.
 
-- Discovers all rollers (blinds) configured on the hub.
-- Exposes each roller as a UC **Cover** entity: open / close / stop / set
-  position.
-- Exposes a battery-percentage **Sensor** entity for battery-powered rollers,
-  and a signal-strength **Sensor** entity for all rollers.
+## What you get
 
-Not yet supported: tilt, rooms/scenes, multiple hubs.
+- Every blind on your hub appears on the Remote. You can open it, close it,
+  stop it, or move it to any position.
+- A battery level sensor for battery-powered blinds.
+- A signal strength sensor for every blind.
+- Smooth position updates while a blind is moving (twice a second).
 
-## Requirements
+Not supported yet: tilt, rooms/scenes, more than one hub.
 
-- Python 3.11+
-- A Rollease Acmeda Pulse Hub v2 reachable on your local network.
+## What you need
 
-## Running
+- An Unfolded Circle Remote.
+- A Rollease Acmeda Pulse Hub v2 on the same network as the Remote.
+- Your hub's IP address. You can find it in your router's device list.
 
-```bash
-cd intg-acmeda
-pip install -r requirements.txt
-python3 driver.py
-```
+## Install it on the Remote (easiest)
 
-The driver listens on port `10091` (see `driver.json`) and advertises itself
-over mDNS so the Remote can discover it. Add it from the Remote's
-integrations screen and enter the hub's IP address/hostname when prompted.
+The driver runs on the Remote itself. No other hardware needed.
 
-Configuration (the hub host + a cached roller list) is persisted to
-`config.json` in the directory pointed to by `UC_CONFIG_HOME` (defaults to the
-current directory if unset).
+1. Download the latest `uc-intg-acmeda-...-aarch64.tar.gz` file from the
+   [Releases page](https://github.com/dgaust/uc-acmeda-pulse/releases).
+2. Open the Remote's web configurator in a browser. Go to
+   **Integrations → Add new → Install custom** and upload the file.
+3. Run the setup and type in your hub's IP address.
 
-## Running as an external driver in Docker
+Your blinds will appear, named the same as in the Pulse app.
 
-To run the driver on a home server / NAS (rather than on the Remote itself),
-use the prebuilt multi-arch image published to GitHub Container Registry by
-this repo's CI. No clone or build is needed - save the following as
-`docker-compose.yml` (it's the same file as in this repo) and start it:
+### Updating
+
+Do the same steps with the newer release file, but tick
+**"Update existing driver"** when uploading. Your settings are kept, so you
+won't need to set it up again. (This needs Remote firmware 2.9.3 or newer.)
+
+## Or run it in Docker
+
+If you'd rather run the driver on an always-on computer, server or NAS, there
+is a ready-made Docker image. It works on both Intel/AMD (x86) and ARM
+machines, including a Raspberry Pi.
+
+Save this as `docker-compose.yml` in a folder of its own:
 
 ```yaml
 services:
@@ -49,150 +55,105 @@ services:
     image: ghcr.io/dgaust/uc-acmeda-pulse:latest
     container_name: uc-acmeda-pulse
     restart: unless-stopped
-    # Required: mDNS discovery + LAN access don't work on a bridge network.
+    # Required - see note below.
     network_mode: host
     environment:
       UC_INTEGRATION_HTTP_PORT: "10091"
     volumes:
-      # Persists the hub host + cached roller list across restarts/upgrades.
+      # Keeps your settings when the container restarts or updates.
       - ./config:/config
 ```
+
+Then start it:
 
 ```bash
 docker compose up -d
 ```
 
-To update to a newer release later:
+On the Remote, go to **Integrations → Add new**. The driver is found
+automatically - select it and type in your hub's IP address.
+
+**Why `network_mode: host` is required:** the Remote finds the driver by
+listening for announcements on the local network, and those announcements
+can't get out of Docker's normal isolated networking. Host mode also lets the
+driver reach your hub.
+
+### Updating
 
 ```bash
 docker compose pull && docker compose up -d
 ```
 
-**Host networking is required** (`network_mode: host`, already set in the
-compose file). The driver advertises itself over mDNS (`_uc-integration._tcp`)
-for the Remote to discover it, and multicast DNS does not cross a Docker bridge
-network - so the container must share the host's network. This also lets it
-reach the hub on your LAN.
+Your settings live in the `config` folder next to the compose file, so they
+survive updates.
 
-The compose file mounts `./config` into the container's `UC_CONFIG_HOME`, so
-the hub host and cached roller list persist across restarts and image updates.
-After the container is running, add the integration from the Remote's
-integrations screen (it should be auto-discovered) and enter the hub's IP.
+## For developers
 
-### Building from source instead
+Everything below is only relevant if you want to change or build the
+integration yourself.
 
-With a checkout of this repo, uncomment the `build: .` line in
-`docker-compose.yml` and run `docker compose up -d --build` - or without
-compose:
+### Run from source
 
 ```bash
-docker build -t uc-acmeda-pulse .
-docker run -d --name uc-acmeda-pulse --network host --restart unless-stopped \
-  -v "$PWD/config:/config" uc-acmeda-pulse
+cd intg-acmeda
+pip install -r requirements.txt
+python3 driver.py
 ```
 
-### Architectures / multi-arch images
+The driver listens on port 10091 and announces itself on the network so the
+Remote can find it. Settings are saved to `config.json` in the folder set by
+the `UC_CONFIG_HOME` environment variable (or the current folder if unset).
 
-The image is pure Python on a multi-arch base, so it runs on both **amd64
-(x86-64)** and **arm64** hosts (Intel/AMD servers & NASes, Raspberry Pi, ARM
-NASes, etc.). `docker build` / `docker compose` automatically produce an image
-for whatever machine you build on.
+### Build the Docker image yourself
 
-To build both architectures at once, use `build-docker.sh` (wraps `docker
-buildx`):
+`docker build -t uc-acmeda-pulse .` builds an image for your own machine.
+`build-docker.sh` builds for both x86 and ARM at once (uses docker buildx):
 
 ```bash
-# validate both arches build
-./build-docker.sh
-
-# build one arch and load it locally for testing
-PLATFORMS=linux/amd64 LOAD=1 ./build-docker.sh
-
-# build and push a multi-arch image to a registry
-IMAGE=ghcr.io/dgaust/uc-acmeda-pulse TAG=0.2.2 PUSH=1 ./build-docker.sh
+./build-docker.sh                                            # check both build
+IMAGE=ghcr.io/dgaust/uc-acmeda-pulse TAG=x.y.z PUSH=1 ./build-docker.sh   # publish
 ```
 
-The included GitHub Actions workflow (`.github/workflows/docker.yml`) builds
-and publishes multi-arch (`linux/amd64,linux/arm64`) images to GHCR on pushes
-to `main` and on version tags, so you can also just pull a prebuilt image:
+The GitHub Actions workflow in `.github/workflows/docker.yml` publishes
+multi-arch images to GitHub Container Registry automatically on every push to
+`main` and on version tags.
 
-```bash
-docker pull ghcr.io/dgaust/uc-acmeda-pulse:latest
-```
-
-## Installing / upgrading on the Remote
-
-The driver ships as a custom-integration archive
-(`dist/uc-intg-acmeda-<version>-aarch64.tar.gz`) built for the Remote's ARM64
-runtime. In the web-configurator: _Integrations → Add new → Install custom_.
-
-To ship a new version **without losing your configuration**, tick
-**"Update existing driver"** on that upload screen (requires Remote firmware
-v2.9.3+), or use the REST API with `?update=true`:
-
-```shell
-curl --location 'http://<remote-ip>/api/intg/install?update=true' \
-  --user 'web-configurator:<PIN>' \
-  --form 'file=@"uc-intg-acmeda-<version>-aarch64.tar.gz"'
-```
-
-An update preserves the `UC_CONFIG_HOME` directory, so the saved hub host and
-cached roller list survive; on restart the driver re-registers its entities
-from that cache and reconnects with no re-setup. A plain (non-update) install
-starts from a clean config.
-
-The upgrade is matched by `driver_id` (`acmeda_pulse`), which is kept stable
-across versions. It deliberately does **not** use the reserved `uc_` prefix
-(reserved for pre-installed integrations, and liable to be removed by a
-firmware update).
-
-## Project layout
+### What's in the repo
 
 ```
 intg-acmeda/
-  driver.json      driver metadata + first setup screen (asks for hub host)
-  driver.py         entrypoint, lifecycle events (connect/disconnect/standby)
-  setup_flow.py      validates the hub is reachable, snapshots its rollers
-  hub_manager.py    owns the persistent PulseHub connection, maps it to entities
-  pulsehub.py        purpose-built async client for the Pulse Hub v2 protocol
-  entities.py        maps a pulsehub Roller <-> UC Cover/Sensor entities
-  config.py         persists the hub host + cached roller list to config.json
-  shared.py         shared IntegrationAPI/event-loop singletons
-Dockerfile          external-driver container image (host networking)
-docker-compose.yml  run the external driver with a persisted config volume
-build-docker.sh     build multi-arch (amd64 + arm64) images with buildx
-.github/workflows/  CI: build & publish multi-arch images to GHCR
+  driver.json        driver details + the setup screen (asks for the hub IP)
+  driver.py           starting point; handles connect/disconnect/standby
+  setup_flow.py        first-time setup: checks the hub and finds the blinds
+  hub_manager.py      keeps the hub connection alive and updates the Remote
+  pulsehub.py          talks the Pulse Hub's own network protocol
+  entities.py          turns each blind into the entities the Remote shows
+  config.py           saves the hub IP and blind list
+  shared.py           shared setup used by the other files
+Dockerfile            Docker image for running on a server/NAS
+docker-compose.yml    ready-to-use Docker setup
+build-docker.sh       builds Docker images for x86 and ARM
 ```
 
-## The hub client (`pulsehub.py`)
+### How it works (the short version)
 
-Rather than depend on a third-party library, the hub protocol is implemented
-directly so the driver controls the behaviours that matter for reliability
-(protocol reference: the [aiopulse2 wiki](https://github.com/sillyfrog/aiopulse2/wiki)):
+- The driver keeps one connection open to the hub and asks for the state of
+  all blinds every 3 seconds - or every half second while a blind is moving,
+  with an extra check the moment you send a command.
+- Blind **names** come from a second, less reliable connection to the hub
+  (TCP port 1487). If that fails, everything still works - the blinds just
+  show their short ID until the name comes through.
+- The driver remembers your hub address and blind list, so after a restart
+  your blinds are back straight away with no re-setup.
+- The Pulse Hub counts position as "percent closed" while the Remote counts
+  "percent open"; the driver converts between the two.
+- The hub's protocol isn't officially documented; this project uses the
+  protocol notes from the [aiopulse2 wiki](https://github.com/sillyfrog/aiopulse2/wiki).
+- The driver id is `acmeda_pulse` and stays the same across versions - that's
+  what lets the Remote treat a new upload as an update instead of a new
+  install. (It avoids the `uc_` prefix, which is reserved for Unfolded
+  Circle's own integrations.)
 
-- **The websocket is the single source of truth.** It connects to
-  `wss://<host>:443/rpc` and polls `shadow` every few seconds; each response
-  carries the full roller state (position, online, battery voltage, signal).
-  Commands (`movePercent` / `stopShade`) are sent over the same socket. The
-  `connected` flag and all update callbacks track *this* socket only, and it
-  reconnects automatically.
-- **Roller names are fetched out-of-band and never gate anything.** The hub
-  does not send names over the websocket - the only local source is the
-  single-connection port-1487 "serial" channel, which can fail. Name
-  resolution runs as a best-effort background task; if it fails, state and
-  control are completely unaffected and rollers keep their id as a name until
-  the next attempt. (Coupling names to state/connectivity was the root cause of
-  the early reliability problems.)
+## License
 
-## Protocol / behaviour notes
-
-- `Roller.closed_percent` is 0=open / 100=closed; the UC Cover `position`
-  attribute is the opposite (0=closed / 100=open) - the conversion lives
-  entirely in `entities.py`.
-- Entities are registered from the cached roller list at **startup**, before
-  the live hub connection completes, because the Remote re-subscribes to its
-  remembered entities the instant it (re)connects to the driver. If the
-  entities weren't already present that subscribe would fail.
-- The driver emits a `device_state` in response to the Remote's `connect`
-  request (and `exit_standby`), even when the hub is already connected - the
-  Remote waits for that event to mark the integration connected.
+[MPL-2.0](LICENSE)
