@@ -47,7 +47,8 @@ If you'd rather run the driver on an always-on computer, server or NAS, there
 is a ready-made Docker image. It works on both Intel/AMD (x86) and ARM
 machines, including a Raspberry Pi.
 
-Save this as `docker-compose.yml` in a folder of its own:
+Save this as `docker-compose.yml` in a folder of its own, and **change the IP
+address on the `UC_INTEGRATION_INTERFACE` line to your server's own LAN IP**:
 
 ```yaml
 services:
@@ -59,6 +60,8 @@ services:
     network_mode: host
     environment:
       UC_INTEGRATION_HTTP_PORT: "10091"
+      # >>> CHANGE to the LAN IP of the machine running Docker <<<
+      UC_INTEGRATION_INTERFACE: "192.168.1.50"
     volumes:
       # Keeps your settings when the container restarts or updates.
       - ./config:/config
@@ -72,6 +75,12 @@ docker compose up -d
 
 On the Remote, go to **Integrations → Add new**. The driver is found
 automatically - select it and type in your hub's IP address.
+
+**Why the server's IP is needed:** the driver has to tell the Remote where to
+find it. Inside a container it can't work its own address out, so unless you
+tell it, it announces a placeholder that leads nowhere. The Remote then either
+can't find the driver at all ("resource not found"), or finds it once but never
+reconnects after the container restarts.
 
 **Why `network_mode: host` is required:** the Remote finds the driver by
 listening for announcements on the local network, and those announcements
@@ -97,10 +106,25 @@ driver as a ServApp instead of using compose directly:
    [`cosmos-compose.json`](https://raw.githubusercontent.com/dgaust/uc-acmeda-pulse/main/cosmos-compose.json)
    from this repo and follow the installer.
 
-The installer only asks where to store the driver's settings. The app has no
-web page of its own, so Cosmos won't create a URL for it - once it's running,
-just add the integration on the Remote as described above. Updates are
-handled by Cosmos automatically.
+The installer asks for your server's LAN IP address (the Remote needs it to
+find the driver) and where to store the settings. The app has no web page of
+its own, so Cosmos won't create a URL for it - once it's running, just add the
+integration on the Remote as described above. Updates are handled by Cosmos
+automatically.
+
+### If the Remote can't find the driver
+
+Nearly always this is the server IP being wrong or unset. Check what the driver
+is announcing:
+
+```bash
+docker logs uc-acmeda-pulse | grep "Publishing driver"
+```
+
+Then make sure `UC_INTEGRATION_INTERFACE` matches the IP other machines use to
+reach that server, and recreate the container (`docker compose up -d`). If you
+had previously added the integration on the Remote by typing an IP address by
+hand, delete it there and re-add it by picking it from the discovered list.
 
 ## For developers
 
