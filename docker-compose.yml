@@ -13,17 +13,14 @@ services:
     # on the LAN. mDNS multicast does not cross a Docker bridge network.
     network_mode: host
     environment:
-      # WebSocket integration-API port the Remote connects to (matches driver.json).
+      # The port the Remote connects to. This is where the port is set - it is
+      # deliberately NOT in driver.json, because a driver that announces a port
+      # in its metadata isn't reconnected to correctly by the Remote.
       UC_INTEGRATION_HTTP_PORT: "10091"
       #
-      # >>> CHANGE THIS to the LAN IP address of the machine running Docker. <<<
-      #
-      # The driver tells the Remote where to find it. Inside a container it can't
-      # work its own address out, and announces a useless placeholder (0.0.0.0)
-      # instead - so the Remote either can't find the driver at all ("resource not
-      # found"), or finds it once but never reconnects after a restart. Setting
-      # this to the server's real IP fixes both.
-      UC_INTEGRATION_INTERFACE: "192.168.1.50"
+      # Optional. Only needed if the Remote has trouble finding the driver: set
+      # it to this machine's LAN IP to pin the address the driver announces.
+      # UC_INTEGRATION_INTERFACE: "192.168.1.50"
     volumes:
       # Persist the hub host + cached roller list across restarts/upgrades.
       - ./config:/config

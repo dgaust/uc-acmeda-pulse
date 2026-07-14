@@ -47,8 +47,7 @@ If you'd rather run the driver on an always-on computer, server or NAS, there
 is a ready-made Docker image. It works on both Intel/AMD (x86) and ARM
 machines, including a Raspberry Pi.
 
-Save this as `docker-compose.yml` in a folder of its own, and **change the IP
-address on the `UC_INTEGRATION_INTERFACE` line to your server's own LAN IP**:
+Save this as `docker-compose.yml` in a folder of its own:
 
 ```yaml
 services:
@@ -60,8 +59,6 @@ services:
     network_mode: host
     environment:
       UC_INTEGRATION_HTTP_PORT: "10091"
-      # >>> CHANGE to the LAN IP of the machine running Docker <<<
-      UC_INTEGRATION_INTERFACE: "192.168.1.50"
     volumes:
       # Keeps your settings when the container restarts or updates.
       - ./config:/config
@@ -74,13 +71,7 @@ docker compose up -d
 ```
 
 On the Remote, go to **Integrations → Add new**. The driver is found
-automatically - select it and type in your hub's IP address.
-
-**Why the server's IP is needed:** the driver has to tell the Remote where to
-find it. Inside a container it can't work its own address out, so unless you
-tell it, it announces a placeholder that leads nowhere. The Remote then either
-can't find the driver at all ("resource not found"), or finds it once but never
-reconnects after the container restarts.
+automatically - select it from the list and type in your hub's IP address.
 
 **Why `network_mode: host` is required:** the Remote finds the driver by
 listening for announcements on the local network, and those announcements
@@ -106,25 +97,33 @@ driver as a ServApp instead of using compose directly:
    [`cosmos-compose.json`](https://raw.githubusercontent.com/dgaust/uc-acmeda-pulse/main/cosmos-compose.json)
    from this repo and follow the installer.
 
-The installer asks for your server's LAN IP address (the Remote needs it to
-find the driver) and where to store the settings. The app has no web page of
-its own, so Cosmos won't create a URL for it - once it's running, just add the
-integration on the Remote as described above. Updates are handled by Cosmos
-automatically.
+The installer only asks where to store the driver's settings. The app has no
+web page of its own, so Cosmos won't create a URL for it - once it's running,
+just add the integration on the Remote as described above. Updates are handled
+by Cosmos automatically.
 
-### If the Remote can't find the driver
+### If the Remote can't find the driver, or won't reconnect after a restart
 
-Nearly always this is the server IP being wrong or unset. Check what the driver
-is announcing:
+**Always add the driver by picking it from the Remote's discovered list**, not
+by typing in an IP address. A driver added by hand isn't re-discovered when it
+restarts, so the Remote never reconnects to it. If you added it that way,
+delete the integration *and* the driver on the Remote, then add it again from
+the list.
+
+To check the driver is announcing itself:
 
 ```bash
 docker logs uc-acmeda-pulse | grep "Publishing driver"
 ```
 
-Then make sure `UC_INTEGRATION_INTERFACE` matches the IP other machines use to
-reach that server, and recreate the container (`docker compose up -d`). If you
-had previously added the integration on the Remote by typing an IP address by
-hand, delete it there and re-add it by picking it from the discovered list.
+If the Remote still can't see it, your server may have several network
+interfaces (docker bridges, VPNs, VMs) and the driver may be announcing the
+wrong one. Pin it by adding your server's LAN IP to the compose file:
+
+```yaml
+    environment:
+      UC_INTEGRATION_INTERFACE: "192.168.1.50"
+```
 
 ## For developers
 
@@ -136,12 +135,18 @@ integration yourself.
 ```bash
 cd intg-acmeda
 pip install -r requirements.txt
-python3 driver.py
+UC_INTEGRATION_HTTP_PORT=10091 python3 driver.py
 ```
 
-The driver listens on port 10091 and announces itself on the network so the
-Remote can find it. Settings are saved to `config.json` in the folder set by
-the `UC_CONFIG_HOME` environment variable (or the current folder if unset).
+The driver announces itself on the network so the Remote can find it.
+
+The port comes from the `UC_INTEGRATION_HTTP_PORT` environment variable, and is
+deliberately **not** set in `driver.json`: a driver that reports a port in its
+metadata isn't reconnected to properly by the Remote after it restarts. (When
+installed on the Remote itself, the Remote sets this variable for you.)
+
+Settings are saved to `config.json` in the folder set by the `UC_CONFIG_HOME`
+environment variable (or the current folder if unset).
 
 ### Build the Docker image yourself
 

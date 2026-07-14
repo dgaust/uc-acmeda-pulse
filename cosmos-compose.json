@@ -2,12 +2,6 @@
   "cosmos-installer": {
     "form": [
       {
-        "name": "serverIp",
-        "label": "What is this server's LAN IP address? (e.g. 192.168.1.50) - the Remote needs it to find the driver",
-        "initialValue": "",
-        "type": "text"
-      },
-      {
         "name": "storagePath",
         "label": "Where do you want to store the driver's settings?",
         "initialValue": "{DefaultDataPath}",
@@ -17,7 +11,7 @@
     "post-install": [
       {
         "type": "warning",
-        "label": "No URL is created for this app - it has no web page. Once it is running, pick up your Unfolded Circle Remote and go to Integrations, Add new. The driver is found automatically - select it and enter your Pulse Hub's IP address. If the Remote cannot find it, check that the server IP you entered during install is correct."
+        "label": "No URL is created for this app - it has no web page. Once it is running, pick up your Unfolded Circle Remote and go to Integrations, Add new. The driver is found automatically - select it from the list and enter your Pulse Hub's IP address."
       }
     ]
   },
@@ -30,8 +24,7 @@
       "NetworkMode": "host",
       "network_mode": "host",
       "environment": [
-        "UC_INTEGRATION_HTTP_PORT=10091",
-        "UC_INTEGRATION_INTERFACE={Context.serverIp}"
+        "UC_INTEGRATION_HTTP_PORT=10091"
       ],
       "volumes": [
         {

@@ -1,6 +1,6 @@
 {
   "driver_id": "acmeda_pulse",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "min_core_api": "0.20.0",
   "name": {
     "en": "Acmeda Pulse Hub"
@@ -9,7 +9,6 @@
   "description": {
     "en": "Control Rollease Acmeda Pulse Hub v2 motorised blinds directly over the local network - no Home Assistant required."
   },
-  "port": 10091,
   "developer": {
     "name": "dgaust",
     "url": "https://github.com/dgaust/uc-acmeda-pulse"
