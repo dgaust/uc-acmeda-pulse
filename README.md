@@ -102,27 +102,35 @@ web page of its own, so Cosmos won't create a URL for it - once it's running,
 just add the integration on the Remote as described above. Updates are handled
 by Cosmos automatically.
 
-### If the Remote can't find the driver, or won't reconnect after a restart
+### If the Remote can't find the driver automatically
 
-**Always add the driver by picking it from the Remote's discovered list**, not
-by typing in an IP address. A driver added by hand isn't re-discovered when it
-restarts, so the Remote never reconnects to it. If you added it that way,
-delete the integration *and* the driver on the Remote, then add it again from
-the list.
+The Remote finds the driver by name (e.g. `myserver.local`). Some servers don't
+publish that name on the network, so the Remote can't work out where the driver
+actually is. This affects every Unfolded Circle driver on the machine, not just
+this one.
 
-To check the driver is announcing itself:
+You have two options.
 
-```bash
-docker logs uc-acmeda-pulse | grep "Publishing driver"
-```
+**Just type the address in.** When adding the integration on the Remote, open
+the advanced settings and replace the server name with its IP address. This
+works fine, and the Remote reconnects normally afterwards.
 
-If the Remote still can't see it, your server may have several network
-interfaces (docker bridges, VPNs, VMs) and the driver may be announcing the
-wrong one. Pin it by adding your server's LAN IP to the compose file:
+**Or make it discoverable properly.** Tell the driver its own address, and the
+Remote no longer has to look the name up:
 
 ```yaml
     environment:
-      UC_INTEGRATION_INTERFACE: "192.168.1.50"
+      UC_INTEGRATION_HTTP_PORT: "10091"
+      UC_INTEGRATION_INTERFACE: "192.168.1.50"   # this server's LAN IP
+```
+
+Recreate the container (`docker compose up -d`) and it will be found
+automatically. The same setting fixes any other UC driver on that server.
+
+To see what the driver is currently announcing:
+
+```bash
+docker logs uc-acmeda-pulse | grep "Publishing driver"
 ```
 
 ## For developers
